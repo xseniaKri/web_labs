@@ -4,6 +4,19 @@
 
 <h2>Главная страница</h2>
 
-<p>Выберите страницу в меню.</p>
+{% if current_user.is_authenticated %}
+
+<p>
+Вы вошли как:
+<b>{{ current_user.username }}</b>
+</p>
+
+{% else %}
+
+<p>
+Вы не авторизованы
+</p>
+
+{% endif %}
 
 {% endblock %}

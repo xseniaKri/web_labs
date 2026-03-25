@@ -1,7 +1,38 @@
-from flask import Flask, render_template, request, make_response
-import re
+from flask import Flask, render_template, redirect, url_for, request, session, flash
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    login_user,
+    login_required,
+    logout_user,
+    current_user
+)
 
 app = Flask(__name__)
+app.secret_key = "super_secret_key"
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+login_manager.login_message = "Для доступа необходимо пройти аутентификацию"
+
+
+class User(UserMixin):
+    def __init__(self, id, username, password):
+        self.id = id
+        self.username = username
+        self.password = password
+
+users = {
+    "user": User(1, "user", "qwerty")
+}
+
+@login_manager.user_loader
+def load_user(user_id):
+    for user in users.values():
+        if str(user.id) == user_id:
+            return user
+    return None
 
 
 @app.route("/")
@@ -9,84 +40,57 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/request-info", methods=["GET", "POST"])
-def request_info():
+@app.route("/counter")
+def counter():
+    if "visits" in session:
+        session["visits"] += 1
+    else:
+        session["visits"] = 1
 
-    url_params = request.args
-    headers = request.headers
-    cookies = request.cookies
-    form_data = request.form
-
-    response = make_response(
-        render_template(
-            "request_info.html",
-            url_params=url_params,
-            headers=headers,
-            cookies=cookies,
-            form_data=form_data
-        )
-    )
-
-    response.set_cookie("example_cookie", "HelloCookie")
-
-    return response
-
-
-@app.route("/phone", methods=["GET", "POST"])
-def phone():
-
-    error = None
-    phone_formatted = None
-    phone_input = ""
-
-    if request.method == "POST":
-
-        phone_input = request.form.get("phone")
-
-        if not re.fullmatch(r"[0-9+\-\s().]+", phone_input):
-            error = (
-                "Недопустимый ввод. "
-                "В номере телефона встречаются "
-                "недопустимые символы."
-            )
-
-        else:
-            digits = re.sub(r"\D", "", phone_input)
-
-            if phone_input.startswith("+7") or phone_input.startswith("8"):
-
-                if len(digits) != 11:
-                    error = (
-                        "Недопустимый ввод. "
-                        "Неверное количество цифр."
-                    )
-
-            else:
-
-                if len(digits) != 10:
-                    error = (
-                        "Недопустимый ввод. "
-                        "Неверное количество цифр."
-                    )
-
-            if not error:
-
-                if len(digits) == 10:
-                    digits = "8" + digits
-
-                phone_formatted = (
-                    f"8-{digits[1:4]}-"
-                    f"{digits[4:7]}-"
-                    f"{digits[7:9]}-"
-                    f"{digits[9:11]}"
-                )
+    visits = session["visits"]
 
     return render_template(
-        "phone.html",
-        error=error,
-        phone_formatted=phone_formatted,
-        phone_input=phone_input
+        "counter.html",
+        visits=visits
     )
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        remember = True if request.form.get("remember") else False
+
+        user = users.get(username)
+
+        if user and user.password == password:
+            login_user(user, remember=remember)
+
+            flash("Успешный вход")
+
+            next_page = request.args.get("next")
+
+            return redirect(next_page or url_for("index"))
+
+        else:
+            flash("Неверный логин или пароль")
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("Вы вышли из системы")
+    return redirect(url_for("index"))
+
+
+@app.route("/secret")
+@login_required
+def secret():
+    return render_template("secret.html")
 
 
 if __name__ == "__main__":
