@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Проверка телефона</h2>
+
+<form method="POST">
+
+<div class="mb-3">
+
+<input
+    type="text"
+    name="phone"
+    class="form-control {% if error %}is-invalid{% endif %}"
+    placeholder="Введите номер телефона"
+    value="{{ phone_input }}"
+>
+
+{% if error %}
+
+<div class="invalid-feedback">
+    {{ error }}
+</div>
+
+{% endif %}
+
+</div>
+
+<button class="btn btn-warning">
+    Проверить
+</button>
+
+</form>
+
+{% if phone_formatted %}
+
+<hr>
+
+<h4>Отформатированный номер:</h4>
+
+<p>{{ phone_formatted }}</p>
+
+{% endif %}
+
+{% endblock %}

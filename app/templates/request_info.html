@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Данные запроса</h2>
+
+<h4>URL параметры</h4>
+<ul>
+{% for key, value in url_params.items() %}
+    <li>{{ key }} = {{ value }}</li>
+{% endfor %}
+</ul>
+
+<h4>Заголовки</h4>
+<ul>
+{% for key, value in headers.items() %}
+    <li>{{ key }} = {{ value }}</li>
+{% endfor %}
+</ul>
+
+<h4>Cookies</h4>
+<ul>
+{% for key, value in cookies.items() %}
+    <li>{{ key }} = {{ value }}</li>
+{% endfor %}
+</ul>
+
+<h4>Параметры формы</h4>
+<ul>
+{% for key, value in form_data.items() %}
+    <li>{{ key }} = {{ value }}</li>
+{% endfor %}
+</ul>
+
+<hr>
+
+<h2>Форма авторизации</h2>
+
+<form method="POST">
+
+    <div class="mb-3">
+        <label>Логин</label>
+        <input
+            type="text"
+            name="username"
+            class="form-control"
+            required
+        >
+    </div>
+    
+    <div class="mb-3">
+        <label>Пароль</label>
+        <input
+            type="password"
+            name="password"
+            class="form-control"
+            required
+        >
+    </div>
+    
+    <button class="btn btn-success">
+        Войти
+    </button>
+    
+    </form>
+
+{% endblock %}
