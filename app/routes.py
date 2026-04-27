@@ -35,7 +35,8 @@ def login():
         if user and user.check_password(password):
             login_user(user, remember=remember)
             flash("Вы успешно вошли.", "success")
-            return redirect(url_for("main.users"))
+            next_page = request.args.get("next")
+            return redirect(next_page or url_for("main.users"))
 
         flash("Неверный логин или пароль.", "danger")
 
@@ -56,32 +57,95 @@ def secret():
     return render_template("secret.html")
 
 
-@main_bp.route("/users", methods=["GET", "POST"])
-@login_required
+@main_bp.get("/users")
 def users():
+    users_list = User.query.order_by(User.id).all()
+    roles = Role.query.order_by(Role.name).all()
+    return render_template("users.html", users=users_list, roles=roles)
+
+
+@main_bp.post("/users")
+@login_required
+def create_user():
+    user = User(
+        login=request.form.get("login", "").strip(),
+        last_name=request.form.get("last_name", "").strip() or None,
+        first_name=request.form.get("first_name", "").strip(),
+        middle_name=request.form.get("middle_name", "").strip(),
+        role_id=request.form.get("role_id") or None,
+    )
+    user.set_password(request.form.get("password", ""))
+    db.session.add(user)
+
+    try:
+        db.session.commit()
+        flash("Пользователь создан.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash("Пользователь с таким логином уже существует.", "danger")
+
+    return redirect(url_for("main.users"))
+
+
+@main_bp.get("/users/<int:user_id>")
+def user_detail(user_id):
+    user = db.session.get(User, user_id)
+    if user is None:
+        flash("Пользователь не найден.", "warning")
+        return redirect(url_for("main.users"))
+
+    return render_template("user_detail.html", user=user)
+
+
+@main_bp.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_user(user_id):
+    user = db.session.get(User, user_id)
+    if user is None:
+        flash("Пользователь не найден.", "warning")
+        return redirect(url_for("main.users"))
+
     if request.method == "POST":
-        user = User(
-            login=request.form.get("login", "").strip(),
-            last_name=request.form.get("last_name", "").strip() or None,
-            first_name=request.form.get("first_name", "").strip(),
-            middle_name=request.form.get("middle_name", "").strip(),
-            role_id=request.form.get("role_id") or None,
-        )
-        user.set_password(request.form.get("password", ""))
-        db.session.add(user)
+        user.login = request.form.get("login", "").strip()
+        user.last_name = request.form.get("last_name", "").strip() or None
+        user.first_name = request.form.get("first_name", "").strip()
+        user.middle_name = request.form.get("middle_name", "").strip()
+        user.role_id = request.form.get("role_id") or None
 
         try:
             db.session.commit()
-            flash("Пользователь создан.", "success")
+            flash("Пользователь обновлен.", "success")
+            return redirect(url_for("main.user_detail", user_id=user.id))
         except IntegrityError:
             db.session.rollback()
             flash("Пользователь с таким логином уже существует.", "danger")
 
+    roles = Role.query.order_by(Role.name).all()
+    return render_template("user_form.html", user=user, roles=roles)
+
+
+@main_bp.route("/users/<int:user_id>/password", methods=["GET", "POST"])
+@login_required
+def change_password(user_id):
+    user = db.session.get(User, user_id)
+    if user is None:
+        flash("Пользователь не найден.", "warning")
         return redirect(url_for("main.users"))
 
-    users_list = User.query.order_by(User.id).all()
-    roles = Role.query.order_by(Role.name).all()
-    return render_template("users.html", users=users_list, roles=roles)
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        password_confirm = request.form.get("password_confirm", "")
+
+        if password != password_confirm:
+            flash("Пароли не совпадают.", "danger")
+            return render_template("change_password.html", user=user)
+
+        user.set_password(password)
+        db.session.commit()
+        flash("Пароль изменен.", "success")
+        return redirect(url_for("main.user_detail", user_id=user.id))
+
+    return render_template("change_password.html", user=user)
 
 
 @main_bp.post("/users/<int:user_id>/delete")
