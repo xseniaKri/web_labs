@@ -17,7 +17,7 @@ main_bp = Blueprint("main", __name__)
 @main_bp.route("/")
 def index():
     users_list = User.query.order_by(User.id).all()
-    return render_template("users.html", users=users_list, title="Главная страница")
+    return render_template("index.html", users=users_list, title="Главная страница")
 
 
 @main_bp.route("/counter")
