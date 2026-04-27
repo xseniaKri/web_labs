@@ -4,6 +4,11 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.extensions import db
 from app.models import Role, User
+from app.validation import (
+    validate_password,
+    validate_user_create_form,
+    validate_user_edit_form,
+)
 
 
 main_bp = Blueprint("main", __name__)
@@ -67,23 +72,22 @@ def users():
 @login_required
 def new_user():
     roles = Role.query.order_by(Role.name).all()
-    return render_template("user_form.html", user=None, roles=roles)
+    return render_template("user_form.html", user=None, roles=roles, errors={})
 
 
 @main_bp.post("/users")
 @login_required
 def create_user():
-    password = request.form.get("password", "")
-    password_confirm = request.form.get("password_confirm", "")
-
-    if password != password_confirm:
-        flash("Пароли не совпадают.", "danger")
+    errors = validate_user_create_form(request.form)
+    if errors:
+        flash("Проверьте корректность заполнения формы.", "danger")
         roles = Role.query.order_by(Role.name).all()
-        return render_template("user_form.html", user=None, roles=roles)
+        return render_template("user_form.html", user=None, roles=roles, errors=errors)
 
+    password = request.form.get("password", "")
     user = User(
         login=request.form.get("login", "").strip(),
-        last_name=request.form.get("last_name", "").strip() or None,
+        last_name=request.form.get("last_name", "").strip(),
         first_name=request.form.get("first_name", "").strip(),
         middle_name=request.form.get("middle_name", "").strip(),
         role_id=request.form.get("role_id") or None,
@@ -94,13 +98,14 @@ def create_user():
     try:
         db.session.commit()
         flash("Пользователь создан.", "success")
-        return redirect(url_for("main.user_detail", user_id=user.id))
+        return redirect(url_for("main.index"))
     except IntegrityError:
         db.session.rollback()
+        errors["login"] = "Пользователь с таким логином уже существует."
         flash("Пользователь с таким логином уже существует.", "danger")
 
     roles = Role.query.order_by(Role.name).all()
-    return render_template("user_form.html", user=None, roles=roles)
+    return render_template("user_form.html", user=None, roles=roles, errors=errors)
 
 
 @main_bp.get("/users/<int:user_id>")
@@ -122,7 +127,13 @@ def edit_user(user_id):
         return redirect(url_for("main.users"))
 
     if request.method == "POST":
-        user.last_name = request.form.get("last_name", "").strip() or None
+        errors = validate_user_edit_form(request.form)
+        if errors:
+            flash("Проверьте корректность заполнения формы.", "danger")
+            roles = Role.query.order_by(Role.name).all()
+            return render_template("user_form.html", user=user, roles=roles, errors=errors)
+
+        user.last_name = request.form.get("last_name", "").strip()
         user.first_name = request.form.get("first_name", "").strip()
         user.middle_name = request.form.get("middle_name", "").strip()
         user.role_id = request.form.get("role_id") or None
@@ -136,7 +147,7 @@ def edit_user(user_id):
             flash("Не удалось обновить пользователя.", "danger")
 
     roles = Role.query.order_by(Role.name).all()
-    return render_template("user_form.html", user=user, roles=roles)
+    return render_template("user_form.html", user=user, roles=roles, errors={})
 
 
 @main_bp.route("/users/<int:user_id>/password", methods=["GET", "POST"])
@@ -150,17 +161,26 @@ def change_password(user_id):
     if request.method == "POST":
         password = request.form.get("password", "")
         password_confirm = request.form.get("password_confirm", "")
+        errors = {}
 
-        if password != password_confirm:
-            flash("Пароли не совпадают.", "danger")
-            return render_template("change_password.html", user=user)
+        password_error = validate_password(password)
+        if password_error:
+            errors["password"] = password_error
+        if password and password_confirm and password != password_confirm:
+            errors["password_confirm"] = "Пароли не совпадают."
+        elif password and not password_confirm:
+            errors["password_confirm"] = "Поле обязательно для заполнения."
+
+        if errors:
+            flash("Проверьте корректность заполнения формы.", "danger")
+            return render_template("change_password.html", user=user, errors=errors)
 
         user.set_password(password)
         db.session.commit()
         flash("Пароль изменен.", "success")
         return redirect(url_for("main.user_detail", user_id=user.id))
 
-    return render_template("change_password.html", user=user)
+    return render_template("change_password.html", user=user, errors={})
 
 
 @main_bp.post("/users/<int:user_id>/delete")

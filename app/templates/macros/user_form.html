@@ -1,53 +1,77 @@
-{% macro render_user_form(action, roles, user=None, mode="create") %}
+{% macro render_user_form(action, roles, user=None, mode="create", errors={}) %}
 <form method="post" action="{{ action }}" class="row g-3">
   {% set selected_role_id = request.form.get('role_id', user.role_id|string if user and user.role_id else '') %}
   {% if mode == "create" %}
   <div class="col-md-6">
     <label for="login" class="form-label">Логин</label>
-    <input id="login" type="text" name="login" class="form-control" value="{{ request.form.get('login', '') }}" required>
+    <input id="login" type="text" name="login" class="form-control {% if errors.get('login') %}is-invalid{% endif %}" value="{{ request.form.get('login', '') }}" required>
+    {% if errors.get('login') %}
+    <div class="invalid-feedback">{{ errors.get('login') }}</div>
+    {% endif %}
   </div>
   <div class="col-md-6">
     <label for="role_id" class="form-label">Роль</label>
-    <select id="role_id" name="role_id" class="form-select">
+    <select id="role_id" name="role_id" class="form-select {% if errors.get('role_id') %}is-invalid{% endif %}">
       <option value="">Без роли</option>
       {% for role in roles %}
       <option value="{{ role.id }}" {% if selected_role_id == role.id|string %}selected{% endif %}>{{ role.name }}</option>
       {% endfor %}
     </select>
+    {% if errors.get('role_id') %}
+    <div class="invalid-feedback">{{ errors.get('role_id') }}</div>
+    {% endif %}
   </div>
   {% else %}
   <div class="col-12">
     <label for="role_id" class="form-label">Роль</label>
-    <select id="role_id" name="role_id" class="form-select">
+    <select id="role_id" name="role_id" class="form-select {% if errors.get('role_id') %}is-invalid{% endif %}">
       <option value="">Без роли</option>
       {% for role in roles %}
       <option value="{{ role.id }}" {% if selected_role_id == role.id|string %}selected{% endif %}>{{ role.name }}</option>
       {% endfor %}
     </select>
+    {% if errors.get('role_id') %}
+    <div class="invalid-feedback">{{ errors.get('role_id') }}</div>
+    {% endif %}
   </div>
   {% endif %}
 
   <div class="col-md-4">
     <label for="last_name" class="form-label">Фамилия</label>
-    <input id="last_name" type="text" name="last_name" class="form-control" value="{{ request.form.get('last_name', user.last_name if user and user.last_name else '') }}">
+    <input id="last_name" type="text" name="last_name" class="form-control {% if errors.get('last_name') %}is-invalid{% endif %}" value="{{ request.form.get('last_name', user.last_name if user and user.last_name else '') }}" required>
+    {% if errors.get('last_name') %}
+    <div class="invalid-feedback">{{ errors.get('last_name') }}</div>
+    {% endif %}
   </div>
   <div class="col-md-4">
     <label for="first_name" class="form-label">Имя</label>
-    <input id="first_name" type="text" name="first_name" class="form-control" value="{{ request.form.get('first_name', user.first_name if user else '') }}" required>
+    <input id="first_name" type="text" name="first_name" class="form-control {% if errors.get('first_name') %}is-invalid{% endif %}" value="{{ request.form.get('first_name', user.first_name if user else '') }}" required>
+    {% if errors.get('first_name') %}
+    <div class="invalid-feedback">{{ errors.get('first_name') }}</div>
+    {% endif %}
   </div>
   <div class="col-md-4">
     <label for="middle_name" class="form-label">Отчество</label>
-    <input id="middle_name" type="text" name="middle_name" class="form-control" value="{{ request.form.get('middle_name', user.middle_name if user else '') }}" required>
+    <input id="middle_name" type="text" name="middle_name" class="form-control {% if errors.get('middle_name') %}is-invalid{% endif %}" value="{{ request.form.get('middle_name', user.middle_name if user else '') }}">
+    {% if errors.get('middle_name') %}
+    <div class="invalid-feedback">{{ errors.get('middle_name') }}</div>
+    {% endif %}
   </div>
 
   {% if mode == "create" %}
   <div class="col-md-6">
     <label for="password" class="form-label">Пароль</label>
-    <input id="password" type="password" name="password" class="form-control" required>
+    <input id="password" type="password" name="password" class="form-control {% if errors.get('password') %}is-invalid{% endif %}" required>
+    {% if errors.get('password') %}
+    <div class="invalid-feedback">{{ errors.get('password') }}</div>
+    {% endif %}
   </div>
   <div class="col-md-6">
     <label for="password_confirm" class="form-label">Повторите пароль</label>
-    <input id="password_confirm" type="password" name="password_confirm" class="form-control" required>
+    <input id="password_confirm" type="password" name="password_confirm" class="form-control {% if errors.get('password_confirm') %}is-invalid{% endif %}" required>
+    {% if errors.get('password_confirm') %}
+    <div class="invalid-feedback">{{ errors.get('password_confirm') }}</div>
+    {% endif %}
   </div>
   {% endif %}
 

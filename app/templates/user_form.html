@@ -8,6 +8,7 @@
     url_for('main.edit_user', user_id=user.id) if user else url_for('main.create_user'),
     roles,
     user,
-    "edit" if user else "create"
+    "edit" if user else "create",
+    errors
 ) }}
 {% endblock %}
