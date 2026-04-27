@@ -62,6 +62,42 @@ def secret():
     return render_template("secret.html")
 
 
+@main_bp.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_own_password():
+    errors = {}
+
+    if request.method == "POST":
+        old_password = request.form.get("old_password", "")
+        new_password = request.form.get("new_password", "")
+        new_password_confirm = request.form.get("new_password_confirm", "")
+
+        if not old_password:
+            errors["old_password"] = "Поле обязательно для заполнения."
+        elif not current_user.check_password(old_password):
+            errors["old_password"] = "Старый пароль указан неверно."
+
+        new_password_error = validate_password(new_password)
+        if new_password_error:
+            errors["new_password"] = new_password_error
+
+        if new_password and new_password_confirm and new_password != new_password_confirm:
+            errors["new_password_confirm"] = "Пароли не совпадают."
+        elif new_password and not new_password_confirm:
+            errors["new_password_confirm"] = "Поле обязательно для заполнения."
+
+        if errors:
+            flash("Проверьте корректность заполнения формы.", "danger")
+            return render_template("change_own_password.html", errors=errors)
+
+        current_user.set_password(new_password)
+        db.session.commit()
+        flash("Пароль успешно изменен.", "success")
+        return redirect(url_for("main.index"))
+
+    return render_template("change_own_password.html", errors=errors)
+
+
 @main_bp.get("/users")
 def users():
     users_list = User.query.order_by(User.id).all()
