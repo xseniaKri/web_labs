@@ -4,6 +4,11 @@
 
 <h2>Главная страница</h2>
 
+<p>
+В системе зарегистрировано учетных записей:
+<b>{{ users_count }}</b>
+</p>
+
 {% if current_user.is_authenticated %}
 
 <p>

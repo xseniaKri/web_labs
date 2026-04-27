@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Учетные записи</h2>
+
+<section class="mb-4">
+  <h3 class="h5 mb-3">Создать пользователя</h3>
+  <form method="post" action="{{ url_for('main.users') }}" class="row g-3">
+    <div class="col-md-3">
+      <label for="username" class="form-label">Логин</label>
+      <input id="username" type="text" name="username" class="form-control" required>
+    </div>
+    <div class="col-md-3">
+      <label for="email" class="form-label">Email</label>
+      <input id="email" type="email" name="email" class="form-control" required>
+    </div>
+    <div class="col-md-3">
+      <label for="password" class="form-label">Пароль</label>
+      <input id="password" type="password" name="password" class="form-control" required>
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+      <div class="form-check mb-2">
+        <input id="is_admin" type="checkbox" name="is_admin" class="form-check-input">
+        <label for="is_admin" class="form-check-label">Администратор</label>
+      </div>
+    </div>
+    <div class="col-md-1 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary w-100">OK</button>
+    </div>
+  </form>
+</section>
+
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Логин</th>
+        <th>Email</th>
+        <th>Роль</th>
+        <th>Статус</th>
+        <th class="text-end">Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.id }}</td>
+        <td>{{ user.username }}</td>
+        <td>{{ user.email }}</td>
+        <td>{{ "Администратор" if user.is_admin else "Пользователь" }}</td>
+        <td>{{ "Активен" if user.is_active_account else "Отключен" }}</td>
+        <td class="text-end">
+          <form method="post" action="{{ url_for('main.toggle_user', user_id=user.id) }}" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+              {{ "Отключить" if user.is_active_account else "Включить" }}
+            </button>
+          </form>
+          <form method="post" action="{{ url_for('main.delete_user', user_id=user.id) }}" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="text-center">Пользователи пока не созданы.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

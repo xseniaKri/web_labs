@@ -1,2 +1,7 @@
 /venv/
+/app/venv/
 /.idea
+.env
+__pycache__/
+*.pyc
+.codex
