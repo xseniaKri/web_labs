@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.extensions import db
 from app.models import Role, User
@@ -169,13 +169,18 @@ def delete_user(user_id):
     user = db.session.get(User, user_id)
     if user is None:
         flash("Пользователь не найден.", "warning")
-        return redirect(url_for("main.users"))
+        return redirect(url_for("main.index"))
 
     if user.id == current_user.id:
         flash("Нельзя удалить собственную учетную запись.", "warning")
-        return redirect(url_for("main.users"))
+        return redirect(url_for("main.index"))
 
-    db.session.delete(user)
-    db.session.commit()
-    flash("Пользователь удален.", "success")
-    return redirect(url_for("main.users"))
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        flash("Пользователь удален.", "success")
+    except SQLAlchemyError:
+        db.session.rollback()
+        flash("Не удалось удалить пользователя.", "danger")
+
+    return redirect(url_for("main.index"))
