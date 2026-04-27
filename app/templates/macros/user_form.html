@@ -1,0 +1,59 @@
+{% macro render_user_form(action, roles, user=None, mode="create") %}
+<form method="post" action="{{ action }}" class="row g-3">
+  {% set selected_role_id = request.form.get('role_id', user.role_id|string if user and user.role_id else '') %}
+  {% if mode == "create" %}
+  <div class="col-md-6">
+    <label for="login" class="form-label">Логин</label>
+    <input id="login" type="text" name="login" class="form-control" value="{{ request.form.get('login', '') }}" required>
+  </div>
+  <div class="col-md-6">
+    <label for="role_id" class="form-label">Роль</label>
+    <select id="role_id" name="role_id" class="form-select">
+      <option value="">Без роли</option>
+      {% for role in roles %}
+      <option value="{{ role.id }}" {% if selected_role_id == role.id|string %}selected{% endif %}>{{ role.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <label for="role_id" class="form-label">Роль</label>
+    <select id="role_id" name="role_id" class="form-select">
+      <option value="">Без роли</option>
+      {% for role in roles %}
+      <option value="{{ role.id }}" {% if selected_role_id == role.id|string %}selected{% endif %}>{{ role.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+
+  <div class="col-md-4">
+    <label for="last_name" class="form-label">Фамилия</label>
+    <input id="last_name" type="text" name="last_name" class="form-control" value="{{ request.form.get('last_name', user.last_name if user and user.last_name else '') }}">
+  </div>
+  <div class="col-md-4">
+    <label for="first_name" class="form-label">Имя</label>
+    <input id="first_name" type="text" name="first_name" class="form-control" value="{{ request.form.get('first_name', user.first_name if user else '') }}" required>
+  </div>
+  <div class="col-md-4">
+    <label for="middle_name" class="form-label">Отчество</label>
+    <input id="middle_name" type="text" name="middle_name" class="form-control" value="{{ request.form.get('middle_name', user.middle_name if user else '') }}" required>
+  </div>
+
+  {% if mode == "create" %}
+  <div class="col-md-6">
+    <label for="password" class="form-label">Пароль</label>
+    <input id="password" type="password" name="password" class="form-control" required>
+  </div>
+  <div class="col-md-6">
+    <label for="password_confirm" class="form-label">Повторите пароль</label>
+    <input id="password_confirm" type="password" name="password_confirm" class="form-control" required>
+  </div>
+  {% endif %}
+
+  <div class="col-12 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">Сохранить</button>
+    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endmacro %}

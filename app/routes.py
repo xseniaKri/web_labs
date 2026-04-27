@@ -122,7 +122,6 @@ def edit_user(user_id):
         return redirect(url_for("main.users"))
 
     if request.method == "POST":
-        user.login = request.form.get("login", "").strip()
         user.last_name = request.form.get("last_name", "").strip() or None
         user.first_name = request.form.get("first_name", "").strip()
         user.middle_name = request.form.get("middle_name", "").strip()
@@ -131,10 +130,10 @@ def edit_user(user_id):
         try:
             db.session.commit()
             flash("Пользователь обновлен.", "success")
-            return redirect(url_for("main.user_detail", user_id=user.id))
+            return redirect(url_for("main.index"))
         except IntegrityError:
             db.session.rollback()
-            flash("Пользователь с таким логином уже существует.", "danger")
+            flash("Не удалось обновить пользователя.", "danger")
 
     roles = Role.query.order_by(Role.name).all()
     return render_template("user_form.html", user=user, roles=roles)
