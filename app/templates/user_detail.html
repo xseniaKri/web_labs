@@ -6,28 +6,36 @@
   <a href="{{ url_for('main.users') }}" class="btn btn-outline-secondary">К списку</a>
 </div>
 
-<dl class="row">
-  <dt class="col-sm-3">ID</dt>
-  <dd class="col-sm-9">{{ user.id }}</dd>
-
-  <dt class="col-sm-3">Логин</dt>
-  <dd class="col-sm-9">{{ user.login }}</dd>
-
-  <dt class="col-sm-3">Фамилия</dt>
-  <dd class="col-sm-9">{{ user.last_name or "Не указана" }}</dd>
-
-  <dt class="col-sm-3">Имя</dt>
-  <dd class="col-sm-9">{{ user.first_name }}</dd>
-
-  <dt class="col-sm-3">Отчество</dt>
-  <dd class="col-sm-9">{{ user.middle_name }}</dd>
-
-  <dt class="col-sm-3">Роль</dt>
-  <dd class="col-sm-9">{{ user.role.name if user.role else "Без роли" }}</dd>
-
-  <dt class="col-sm-3">Дата создания</dt>
-  <dd class="col-sm-9">{{ user.created_at.strftime("%d.%m.%Y %H:%M") }}</dd>
-</dl>
+<div class="table-responsive">
+  <table class="table table-bordered align-middle">
+    <tbody>
+      <tr>
+        <th scope="row">id</th>
+        <td>{{ user.id }}</td>
+      </tr>
+      <tr>
+        <th scope="row">login</th>
+        <td>{{ user.login }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Фамилия</th>
+        <td>{{ user.last_name or "" }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Имя</th>
+        <td>{{ user.first_name }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Отчество</th>
+        <td>{{ user.middle_name }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Название роли</th>
+        <td>{{ user.role.name if user.role else "Роль не указана" }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
 {% if current_user.is_authenticated %}
 <div class="d-flex gap-2">

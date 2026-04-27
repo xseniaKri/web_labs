@@ -6,6 +6,7 @@ Create Date: 2026-04-27 00:00:00
 """
 from alembic import op
 import sqlalchemy as sa
+from werkzeug.security import generate_password_hash
 
 
 revision = "0001_create_users"
@@ -43,6 +44,29 @@ def upgrade():
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_users_login"), "users", ["login"], unique=True)
+
+    users_table = sa.table(
+        "users",
+        sa.column("login", sa.String),
+        sa.column("password_hash", sa.String),
+        sa.column("last_name", sa.String),
+        sa.column("first_name", sa.String),
+        sa.column("middle_name", sa.String),
+        sa.column("role_id", sa.Integer),
+    )
+    op.bulk_insert(
+        users_table,
+        [
+            {
+                "login": "user",
+                "password_hash": generate_password_hash("qwerty"),
+                "last_name": None,
+                "first_name": "User",
+                "middle_name": "Default",
+                "role_id": None,
+            }
+        ],
+    )
 
 
 def downgrade():
