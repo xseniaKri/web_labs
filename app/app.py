@@ -5,7 +5,7 @@ from pathlib import Path
 if __package__ is None:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app import create_app
+from app.factory import create_app
 
 
 app = create_app()

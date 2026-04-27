@@ -28,7 +28,7 @@ alembic upgrade head
 flask --app app.app:app create-admin
 ```
 
-По умолчанию создается пользователь `admin` с паролем `admin`. Значения можно переопределить через переменные окружения `ADMIN_USERNAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+По умолчанию создается пользователь `admin` с паролем `admin`. Значения можно переопределить через переменные окружения `ADMIN_USERNAME`, `ADMIN_PASSWORD`.
 
 5. Запустить Flask:
 

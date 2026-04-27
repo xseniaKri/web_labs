@@ -3,7 +3,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import User
+from app.models import Role, User
 
 
 main_bp = Blueprint("main", __name__)
@@ -27,12 +27,12 @@ def login():
         return redirect(url_for("main.index"))
 
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
+        login_value = request.form.get("login", "").strip()
         password = request.form.get("password", "")
         remember = request.form.get("remember") == "on"
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(login=login_value).first()
 
-        if user and user.check_password(password) and user.is_active_account:
+        if user and user.check_password(password):
             login_user(user, remember=remember)
             flash("Вы успешно вошли.", "success")
             return redirect(url_for("main.users"))
@@ -61,9 +61,11 @@ def secret():
 def users():
     if request.method == "POST":
         user = User(
-            username=request.form.get("username", "").strip(),
-            email=request.form.get("email", "").strip(),
-            is_admin=request.form.get("is_admin") == "on",
+            login=request.form.get("login", "").strip(),
+            last_name=request.form.get("last_name", "").strip() or None,
+            first_name=request.form.get("first_name", "").strip(),
+            middle_name=request.form.get("middle_name", "").strip(),
+            role_id=request.form.get("role_id") or None,
         )
         user.set_password(request.form.get("password", ""))
         db.session.add(user)
@@ -73,30 +75,13 @@ def users():
             flash("Пользователь создан.", "success")
         except IntegrityError:
             db.session.rollback()
-            flash("Пользователь с таким логином или email уже существует.", "danger")
+            flash("Пользователь с таким логином уже существует.", "danger")
 
         return redirect(url_for("main.users"))
 
     users_list = User.query.order_by(User.id).all()
-    return render_template("users.html", users=users_list)
-
-
-@main_bp.post("/users/<int:user_id>/toggle")
-@login_required
-def toggle_user(user_id):
-    user = db.session.get(User, user_id)
-    if user is None:
-        flash("Пользователь не найден.", "warning")
-        return redirect(url_for("main.users"))
-
-    if user.id == current_user.id:
-        flash("Нельзя отключить собственную учетную запись.", "warning")
-        return redirect(url_for("main.users"))
-
-    user.is_active_account = not user.is_active_account
-    db.session.commit()
-    flash("Статус пользователя обновлен.", "success")
-    return redirect(url_for("main.users"))
+    roles = Role.query.order_by(Role.name).all()
+    return render_template("users.html", users=users_list, roles=roles)
 
 
 @main_bp.post("/users/<int:user_id>/delete")
