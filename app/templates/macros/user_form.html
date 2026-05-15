@@ -1,4 +1,4 @@
-{% macro render_user_form(action, roles, user=None, mode="create", errors={}) %}
+{% macro render_user_form(action, roles, user=None, mode="create", errors={}, can_edit_role=false) %}
 <form method="post" action="{{ action }}" class="row g-3">
   {% set selected_role_id = request.form.get('role_id', user.role_id|string if user and user.role_id else '') %}
   {% if mode == "create" %}
@@ -24,7 +24,7 @@
   {% else %}
   <div class="col-12">
     <label for="role_id" class="form-label">Роль</label>
-    <select id="role_id" name="role_id" class="form-select {% if errors.get('role_id') %}is-invalid{% endif %}" {% if errors.get('role_id') %}aria-describedby="role-id-feedback"{% endif %}>
+    <select id="role_id" name="role_id" class="form-select {% if errors.get('role_id') %}is-invalid{% endif %}" {% if errors.get('role_id') %}aria-describedby="role-id-feedback"{% endif %} {% if not can_edit_role %}disabled{% endif %}>
       <option value="">Без роли</option>
       {% for role in roles %}
       <option value="{{ role.id }}" {% if selected_role_id == role.id|string %}selected{% endif %}>{{ role.name }}</option>

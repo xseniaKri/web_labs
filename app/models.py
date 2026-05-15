@@ -37,6 +37,12 @@ class User(UserMixin, db.Model):
     )
 
     role = db.relationship("Role", back_populates="users")
+    visits = db.relationship(
+        "VisitLog",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -46,6 +52,30 @@ class User(UserMixin, db.Model):
 
     def __repr__(self):
         return f"<User {self.login}>"
+
+
+class VisitLog(db.Model):
+    __tablename__ = "visit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    path = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        server_default=db.func.now(),
+    )
+
+    user = db.relationship("User", back_populates="visits")
+
+    def __repr__(self):
+        return f"<VisitLog {self.path}>"
 
 
 @login_manager.user_loader

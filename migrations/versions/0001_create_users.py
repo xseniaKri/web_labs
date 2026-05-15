@@ -45,6 +45,22 @@ def upgrade():
     )
     op.create_index(op.f("ix_users_login"), "users", ["login"], unique=True)
 
+    op.create_table(
+        "visit_logs",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("path", sa.String(length=100), nullable=False),
+        sa.Column("user_id", sa.Integer(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(op.f("ix_visit_logs_user_id"), "visit_logs", ["user_id"], unique=False)
+
     users_table = sa.table(
         "users",
         sa.column("login", sa.String),
@@ -56,9 +72,21 @@ def upgrade():
     )
     roles_table = sa.table(
         "roles",
-        sa.column("role_id", sa.Integer),
         sa.column("name", sa.String(length=80)),
         sa.column("description", sa.Text()),
+    )
+    op.bulk_insert(
+        roles_table,
+        [
+            {
+                "name": "Администратор",
+                "description": "роль админа",
+            },
+            {
+                "name": "Пользователь",
+                "description": "роль пользователя",
+            },
+        ]
     )
     op.bulk_insert(
         users_table,
@@ -67,32 +95,25 @@ def upgrade():
                 "login": "user",
                 "password_hash": generate_password_hash("qwerty"),
                 "last_name": None,
-                "first_name": "User",
-                "middle_name": "Default",
-                "role_id": None,
-            }
+                "first_name": "Иван",
+                "middle_name": "Иванович",
+                "role_id": 1,
+            },
+            {
+                "login": "user2",
+                "password_hash": generate_password_hash("qwerty"),
+                "last_name": None,
+                "first_name": "Сергей",
+                "middle_name": "Сергеевич",
+                "role_id": 2,
+            },
         ],
-    )
-    op.bulk_insert(
-        roles_table,
-        [
-            {
-                "name": "Default",
-                "description": "def",
-            },
-            {
-                "name": "Администратор",
-                "description": "роль админа",
-            },
-            {
-                "name": "Менеджер",
-                "description": "роль менеджера",
-            },
-        ]
     )
 
 
 def downgrade():
+    op.drop_index(op.f("ix_visit_logs_user_id"), table_name="visit_logs")
+    op.drop_table("visit_logs")
     op.drop_index(op.f("ix_users_login"), table_name="users")
     op.drop_table("users")
     op.drop_index(op.f("ix_roles_name"), table_name="roles")

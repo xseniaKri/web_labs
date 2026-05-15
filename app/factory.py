@@ -2,6 +2,7 @@ from flask import Flask
 
 from app.config import Config
 from app.extensions import db, login_manager
+from app.reports import reports_bp
 from app.routes import main_bp
 
 
@@ -16,5 +17,6 @@ def create_app(config_class=Config):
     login_manager.login_message_category = "warning"
 
     flask_app.register_blueprint(main_bp)
+    flask_app.register_blueprint(reports_bp)
 
     return flask_app

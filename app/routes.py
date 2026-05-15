@@ -1,3 +1,5 @@
+from functools import wraps
+
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -12,6 +14,81 @@ from app.validation import (
 
 
 main_bp = Blueprint("main", __name__)
+
+
+ADMIN_ROLE = "Администратор"
+USER_ROLE = "Пользователь"
+RIGHTS_ERROR = "У вас недостаточно прав для доступа к данной странице."
+
+
+def is_admin(user=None):
+    user = user or current_user
+    return user.is_authenticated and user.role and user.role.name == ADMIN_ROLE
+
+
+def is_regular_user(user=None):
+    user = user or current_user
+    return user.is_authenticated and user.role and user.role.name == USER_ROLE
+
+
+def can(action, user=None):
+    if not current_user.is_authenticated:
+        return False
+
+    if is_admin():
+        return action in {
+            "create_user",
+            "edit_user",
+            "view_user",
+            "delete_user",
+            "view_visit_log",
+            "view_visit_reports",
+            "change_user_password",
+        }
+
+    if not is_regular_user():
+        return False
+
+    if action in {"view_visit_log", "view_visit_reports"}:
+        return True
+
+    if user is None:
+        return False
+
+    own_profile = user.id == current_user.id
+    return own_profile and action in {"edit_user", "view_user"}
+
+
+def check_rights(action, get_resource=None):
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def wrapper(*args, **kwargs):
+            resource = get_resource(*args, **kwargs) if get_resource else None
+            if get_resource and resource is None:
+                return view_func(*args, **kwargs)
+
+            if can(action, resource):
+                return view_func(*args, **kwargs)
+
+            flash(RIGHTS_ERROR, "danger")
+            return redirect(url_for("main.index"))
+
+        return wrapper
+
+    return decorator
+
+
+def get_user_from_route(*args, **kwargs):
+    user_id = kwargs.get("user_id")
+    if user_id is None:
+        return None
+    return db.session.get(User, user_id)
+
+
+@main_bp.context_processor
+def inject_permissions():
+    return {"can": can, "is_admin": is_admin}
 
 
 @main_bp.route("/")
@@ -105,20 +182,32 @@ def users():
 
 
 @main_bp.get("/users/create")
-@login_required
+@check_rights("create_user")
 def new_user():
     roles = Role.query.order_by(Role.name).all()
-    return render_template("user_form.html", user=None, roles=roles, errors={})
+    return render_template(
+        "user_form.html",
+        user=None,
+        roles=roles,
+        errors={},
+        can_edit_role=True,
+    )
 
 
 @main_bp.post("/users")
-@login_required
+@check_rights("create_user")
 def create_user():
     errors = validate_user_create_form(request.form)
     if errors:
         flash("Проверьте корректность заполнения формы.", "danger")
         roles = Role.query.order_by(Role.name).all()
-        return render_template("user_form.html", user=None, roles=roles, errors=errors)
+        return render_template(
+            "user_form.html",
+            user=None,
+            roles=roles,
+            errors=errors,
+            can_edit_role=True,
+        )
 
     password = request.form.get("password", "")
     user = User(
@@ -141,10 +230,17 @@ def create_user():
         flash("Пользователь с таким логином уже существует.", "danger")
 
     roles = Role.query.order_by(Role.name).all()
-    return render_template("user_form.html", user=None, roles=roles, errors=errors)
+    return render_template(
+        "user_form.html",
+        user=None,
+        roles=roles,
+        errors=errors,
+        can_edit_role=True,
+    )
 
 
 @main_bp.get("/users/<int:user_id>")
+@check_rights("view_user", get_user_from_route)
 def user_detail(user_id):
     user = db.session.get(User, user_id)
     if user is None:
@@ -155,7 +251,7 @@ def user_detail(user_id):
 
 
 @main_bp.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
-@login_required
+@check_rights("edit_user", get_user_from_route)
 def edit_user(user_id):
     user = db.session.get(User, user_id)
     if user is None:
@@ -167,12 +263,19 @@ def edit_user(user_id):
         if errors:
             flash("Проверьте корректность заполнения формы.", "danger")
             roles = Role.query.order_by(Role.name).all()
-            return render_template("user_form.html", user=user, roles=roles, errors=errors)
+            return render_template(
+                "user_form.html",
+                user=user,
+                roles=roles,
+                errors=errors,
+                can_edit_role=is_admin(),
+            )
 
         user.last_name = request.form.get("last_name", "").strip()
         user.first_name = request.form.get("first_name", "").strip()
         user.middle_name = request.form.get("middle_name", "").strip()
-        user.role_id = request.form.get("role_id") or None
+        if is_admin():
+            user.role_id = request.form.get("role_id") or None
 
         try:
             db.session.commit()
@@ -183,11 +286,17 @@ def edit_user(user_id):
             flash("Не удалось обновить пользователя.", "danger")
 
     roles = Role.query.order_by(Role.name).all()
-    return render_template("user_form.html", user=user, roles=roles, errors={})
+    return render_template(
+        "user_form.html",
+        user=user,
+        roles=roles,
+        errors={},
+        can_edit_role=is_admin(),
+    )
 
 
 @main_bp.route("/users/<int:user_id>/password", methods=["GET", "POST"])
-@login_required
+@check_rights("change_user_password", get_user_from_route)
 def change_password(user_id):
     user = db.session.get(User, user_id)
     if user is None:
@@ -220,7 +329,7 @@ def change_password(user_id):
 
 
 @main_bp.post("/users/<int:user_id>/delete")
-@login_required
+@check_rights("delete_user", get_user_from_route)
 def delete_user(user_id):
     user = db.session.get(User, user_id)
     if user is None:

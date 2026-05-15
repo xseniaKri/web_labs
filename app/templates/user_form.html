@@ -9,6 +9,7 @@
     roles,
     user,
     "edit" if user else "create",
-    errors
+    errors,
+    can_edit_role|default(false)
 ) }}
 {% endblock %}

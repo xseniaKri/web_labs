@@ -37,13 +37,17 @@
   </table>
 </div>
 
-{% if current_user.is_authenticated %}
 <div class="d-flex gap-2">
+  {% if can("edit_user", user) %}
   <a href="{{ url_for('main.edit_user', user_id=user.id) }}" class="btn btn-primary">Редактировать</a>
+  {% endif %}
+  {% if can("change_user_password", user) %}
   <a href="{{ url_for('main.change_password', user_id=user.id) }}" class="btn btn-outline-secondary">Изменить пароль</a>
+  {% endif %}
+  {% if can("delete_user", user) and current_user.id != user.id %}
   <form method="post" action="{{ url_for('main.delete_user', user_id=user.id) }}">
     <button type="submit" class="btn btn-outline-danger">Удалить</button>
   </form>
+  {% endif %}
 </div>
-{% endif %}
 {% endblock %}
