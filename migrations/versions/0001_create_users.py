@@ -54,6 +54,12 @@ def upgrade():
         sa.column("middle_name", sa.String),
         sa.column("role_id", sa.Integer),
     )
+    roles_table = sa.table(
+        "roles",
+        sa.column("role_id", sa.Integer),
+        sa.column("name", sa.String(length=80)),
+        sa.column("description", sa.Text()),
+    )
     op.bulk_insert(
         users_table,
         [
@@ -66,6 +72,23 @@ def upgrade():
                 "role_id": None,
             }
         ],
+    )
+    op.bulk_insert(
+        roles_table,
+        [
+            {
+                "name": "Default",
+                "description": "def",
+            },
+            {
+                "name": "Администратор",
+                "description": "роль админа",
+            },
+            {
+                "name": "Менеджер",
+                "description": "роль менеджера",
+            },
+        ]
     )
 
 

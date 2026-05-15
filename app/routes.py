@@ -101,7 +101,7 @@ def change_own_password():
 @main_bp.get("/users")
 def users():
     users_list = User.query.order_by(User.id).all()
-    return render_template("users.html", users=users_list, title="Учетные записи")
+    return render_template("index.html", users=users_list, title="Учетные записи")
 
 
 @main_bp.get("/users/create")
