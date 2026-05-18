@@ -1,10 +1,10 @@
 import os
 
+SECRET_KEY = 'secret-key'
 
-class Config:
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        "DATABASE_URL",
-        "postgresql+psycopg2://lab_user:lab_password@localhost:5432/lab_db",
-    )
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+# SQLALCHEMY_DATABASE_URI = 'sqlite:///project.db'
+SQLALCHEMY_DATABASE_URI = 'mysql+mysqlconnector://user:password@std-mysql.ist.mospolytech.ru/db_name'
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+SQLALCHEMY_ECHO = True
+
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'media', 'images')

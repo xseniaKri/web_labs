@@ -1,48 +1,48 @@
-from datetime import datetime, timezone
-
-from flask_login import UserMixin
+import os
+from typing import Optional, Union, List
+from datetime import datetime
+import sqlalchemy as sa
 from werkzeug.security import check_password_hash, generate_password_hash
+from flask_login import UserMixin
+from flask import url_for
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import String, ForeignKey, DateTime, Text, Integer, MetaData
 
-from app.extensions import db, login_manager
 
+class Base(DeclarativeBase):
+  metadata = MetaData(naming_convention={
+        "ix": 'ix_%(column_0_label)s',
+        "uq": "uq_%(table_name)s_%(column_0_name)s",
+        "ck": "ck_%(table_name)s_%(constraint_name)s",
+        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+        "pk": "pk_%(table_name)s"
+    })
 
-class Role(db.Model):
-    __tablename__ = "roles"
+db = SQLAlchemy(model_class=Base)
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), nullable=False, unique=True)
-    description = db.Column(db.Text, nullable=False)
+class Category(Base):
+    __tablename__ = 'categories'
 
-    users = db.relationship("User", back_populates="role")
+    id = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    parent_id: Mapped[Optional[int]] = mapped_column(ForeignKey("categories.id"))
 
     def __repr__(self):
-        return f"<Role {self.name}>"
+        return '<Category %r>' % self.name
 
 
-class User(UserMixin, db.Model):
-    __tablename__ = "users"
+class User(Base, UserMixin):
+    __tablename__ = 'users'
 
-    id = db.Column(db.Integer, primary_key=True)
-    login = db.Column(db.String(80), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
-    last_name = db.Column(db.String(120), nullable=True)
-    first_name = db.Column(db.String(120), nullable=False)
-    middle_name = db.Column(db.String(120), nullable=False)
-    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
-    created_at = db.Column(
-        db.DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(timezone.utc),
-        server_default=db.func.now(),
-    )
-
-    role = db.relationship("Role", back_populates="users")
-    visits = db.relationship(
-        "VisitLog",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
+    id: Mapped[int] = mapped_column(primary_key=True)
+    first_name: Mapped[str] = mapped_column(String(100))
+    last_name: Mapped[str] = mapped_column(String(100))
+    middle_name: Mapped[Optional[str]] = mapped_column(String(100))
+    login: Mapped[str] = mapped_column(String(100), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -50,34 +50,59 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    def __repr__(self):
-        return f"<User {self.login}>"
-
-
-class VisitLog(db.Model):
-    __tablename__ = "visit_logs"
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=True,
-        index=True,
-    )
-    path = db.Column(db.String(100), nullable=False)
-    created_at = db.Column(
-        db.DateTime(timezone=True),
-        nullable=False,
-        default=lambda: datetime.now(timezone.utc),
-        server_default=db.func.now(),
-    )
-
-    user = db.relationship("User", back_populates="visits")
+    @property
+    def full_name(self):
+        return ' '.join([self.last_name, self.first_name, self.middle_name or ''])
 
     def __repr__(self):
-        return f"<VisitLog {self.path}>"
+        return '<User %r>' % self.login
 
+class Course(Base):
+    __tablename__ = 'courses'
 
-@login_manager.user_loader
-def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    short_desc: Mapped[str] = mapped_column(Text)
+    full_desc: Mapped[str] = mapped_column(Text)
+    rating_sum: Mapped[int] = mapped_column(default=0)
+    rating_num: Mapped[int] = mapped_column(default=0)
+    category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    background_image_id: Mapped[str] = mapped_column(ForeignKey("images.id"))
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+
+    author: Mapped["User"] = relationship()
+    category: Mapped["Category"] = relationship(lazy=False)
+    bg_image: Mapped["Image"] = relationship()
+
+    def __repr__(self):
+        return '<Course %r>' % self.name
+
+    @property
+    def rating(self):
+        if self.rating_num > 0:
+            return self.rating_sum / self.rating_num
+        return 0
+
+class Image(db.Model):
+    __tablename__ = 'images'
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    file_name: Mapped[str] = mapped_column(String(100))
+    mime_type: Mapped[str] = mapped_column(String(100))
+    md5_hash: Mapped[str] = mapped_column(String(100), unique=True)
+    object_id: Mapped[Optional[int]]
+    object_type: Mapped[Optional[str]] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(default=datetime.now)
+
+    def __repr__(self):
+        return '<Image %r>' % self.file_name
+
+    @property
+    def storage_filename(self):
+        _, ext = os.path.splitext(self.file_name)
+        return self.id + ext
+
+    @property
+    def url(self):
+        return url_for('image', image_id=self.id)

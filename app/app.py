@@ -1,18 +1,39 @@
-import sys
-from pathlib import Path
+from flask import Flask, render_template, send_from_directory
+from flask_migrate import Migrate
+from sqlalchemy.exc import SQLAlchemyError
+from models import db, Category, Image
+from auth import bp as auth_bp, init_login_manager
+from courses import bp as courses_bp
 
-from asgiref.wsgi import WsgiToAsgi
+app = Flask(__name__)
+application = app
 
+app.config.from_pyfile('config.py')
 
-if __package__ is None:
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+db.init_app(app)
+migrate = Migrate(app, db)
 
-from app.factory import create_app
+init_login_manager(app)
 
+@app.errorhandler(SQLAlchemyError)
+def handle_sqlalchemy_error(err):
+    error_msg = ('Возникла ошибка при подключении к базе данных. '
+                 'Повторите попытку позже.')
+    return f'{error_msg} (Подробнее: {err})', 500
 
-app = create_app()
-asgi_app = WsgiToAsgi(app)
+app.register_blueprint(auth_bp)
+app.register_blueprint(courses_bp)
 
+@app.route('/')
+def index():
+    categories = db.session.execute(db.select(Category)).scalars()
+    return render_template(
+        'index.html',
+        categories=categories,
+    )
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route('/images/<image_id>')
+def image(image_id):
+    img = db.get_or_404(Image, image_id)
+    return send_from_directory(app.config['UPLOAD_FOLDER'],
+                               img.storage_filename)
