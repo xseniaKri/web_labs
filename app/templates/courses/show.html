@@ -62,6 +62,25 @@
             </div>
         {% endif %}
     </section>
+
+    <section class="reviews mb-5">
+        <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+            <h2 class="mb-0 text-uppercase font-weight-bold">Отзывы</h2>
+            <a class="btn btn-outline-dark ms-auto" href="{{ url_for('courses.reviews', course_id=course.id) }}">Все отзывы</a>
+        </div>
+
+        {% if reviews %}
+            {% for review in reviews %}
+                {% include 'courses/_review.html' %}
+            {% endfor %}
+        {% else %}
+            <p class="text-muted">У этого курса пока нет отзывов.</p>
+        {% endif %}
+    </section>
+
+    <section class="mb-5">
+        {% include 'courses/_review_form.html' %}
+    </section>
 </div>
 
 {% endblock %}

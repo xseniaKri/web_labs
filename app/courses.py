@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
-from flask_login import login_required
+from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
-from models import db, Course, Category, User
+from models import db, Course, Category, User, Review
 from tools import CoursesFilter, ImageSaver
 
 bp = Blueprint('courses', __name__, url_prefix='/courses')
@@ -9,6 +9,21 @@ bp = Blueprint('courses', __name__, url_prefix='/courses')
 COURSE_PARAMS = [
     'author_id', 'name', 'category_id', 'short_desc', 'full_desc'
 ]
+
+REVIEW_RATINGS = {
+    5: 'отлично',
+    4: 'хорошо',
+    3: 'удовлетворительно',
+    2: 'неудовлетворительно',
+    1: 'плохо',
+    0: 'ужасно',
+}
+
+REVIEW_SORTS = {
+    'newest': 'по новизне',
+    'positive': 'сначала положительные',
+    'negative': 'сначала отрицательные',
+}
 
 def params():
     return { p: request.form.get(p) or None for p in COURSE_PARAMS }
@@ -18,6 +33,29 @@ def search_params():
         'name': request.args.get('name'),
         'category_ids': [x for x in request.args.getlist('category_ids') if x],
     }
+
+def review_params():
+    return {
+        'rating': request.form.get('rating'),
+        'text': request.form.get('text'),
+    }
+
+def current_user_review(course_id):
+    if not current_user.is_authenticated:
+        return None
+
+    return db.session.execute(
+        db.select(Review).filter_by(course_id=course_id, user_id=current_user.id)
+    ).scalar()
+
+def reviews_query(course_id, sort):
+    query = db.select(Review).filter_by(course_id=course_id)
+
+    if sort == 'positive':
+        return query.order_by(Review.rating.desc(), Review.created_at.desc())
+    if sort == 'negative':
+        return query.order_by(Review.rating.asc(), Review.created_at.desc())
+    return query.order_by(Review.created_at.desc())
 
 @bp.route('/')
 def index():
@@ -73,4 +111,65 @@ def create():
 @bp.route('/<int:course_id>')
 def show(course_id):
     course = db.get_or_404(Course, course_id)
-    return render_template('courses/show.html', course=course)
+    reviews = db.session.execute(reviews_query(course.id, 'newest').limit(5)).scalars().all()
+    user_review = current_user_review(course.id)
+
+    return render_template('courses/show.html',
+                           course=course,
+                           reviews=reviews,
+                           user_review=user_review,
+                           review_ratings=REVIEW_RATINGS)
+
+@bp.route('/<int:course_id>/reviews')
+def reviews(course_id):
+    course = db.get_or_404(Course, course_id)
+    sort = request.args.get('sort', 'newest')
+    if sort not in REVIEW_SORTS:
+        sort = 'newest'
+
+    pagination = db.paginate(reviews_query(course.id, sort))
+    user_review = current_user_review(course.id)
+
+    return render_template('courses/reviews.html',
+                           course=course,
+                           reviews=pagination.items,
+                           pagination=pagination,
+                           sort=sort,
+                           review_sorts=REVIEW_SORTS,
+                           review_ratings=REVIEW_RATINGS,
+                           user_review=user_review)
+
+@bp.route('/<int:course_id>/reviews/create', methods=['POST'])
+@login_required
+def create_review(course_id):
+    course = db.get_or_404(Course, course_id)
+
+    if current_user_review(course.id):
+        flash('Вы уже оставили отзыв на этот курс.', 'warning')
+        return redirect(request.form.get('next') or url_for('courses.show', course_id=course.id))
+
+    form = review_params()
+    try:
+        rating = int(form['rating'])
+    except (TypeError, ValueError):
+        rating = None
+
+    text = (form['text'] or '').strip()
+    if rating not in REVIEW_RATINGS or not text:
+        flash('Заполните оценку и текст отзыва корректно.', 'danger')
+        return redirect(request.form.get('next') or url_for('courses.show', course_id=course.id))
+
+    review = Review(
+        rating=rating,
+        text=text,
+        course_id=course.id,
+        user_id=current_user.id,
+    )
+    course.rating_sum = (course.rating_sum or 0) + rating
+    course.rating_num = (course.rating_num or 0) + 1
+
+    db.session.add(review)
+    db.session.commit()
+    flash('Отзыв был успешно добавлен.', 'success')
+
+    return redirect(request.form.get('next') or url_for('courses.show', course_id=course.id))

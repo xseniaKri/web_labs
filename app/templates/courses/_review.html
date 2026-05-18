@@ -1,0 +1,8 @@
+<div class="border rounded p-3 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <strong>{{ review.user.full_name }}</strong>
+        <span class="text-muted">{{ review.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+        <span class="ms-auto">★ {{ review.rating }}</span>
+    </div>
+    <p class="mb-0">{{ review.text }}</p>
+</div>

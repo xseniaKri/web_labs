@@ -84,6 +84,25 @@ class Course(Base):
             return self.rating_sum / self.rating_num
         return 0
 
+class Review(Base):
+    __tablename__ = 'reviews'
+    __table_args__ = (
+        sa.CheckConstraint('rating >= 0 AND rating <= 5', name='rating_range'),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    rating: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    course_id: Mapped[Optional[int]] = mapped_column(ForeignKey("courses.id"))
+    user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"))
+
+    course: Mapped[Optional["Course"]] = relationship()
+    user: Mapped[Optional["User"]] = relationship()
+
+    def __repr__(self):
+        return '<Review %r>' % self.id
+
 class Image(db.Model):
     __tablename__ = 'images'
 
