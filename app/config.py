@@ -3,7 +3,7 @@ import os
 SECRET_KEY = 'secret-key'
 
 # SQLALCHEMY_DATABASE_URI = 'sqlite:///project.db'
-SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://lab_user:lab_password@localhost:5432/lab_db"
+SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://lab_user:lab_password@localhost:5433/lab_db"
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 SQLALCHEMY_ECHO = True
 

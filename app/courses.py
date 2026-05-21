@@ -127,7 +127,7 @@ def reviews(course_id):
     if sort not in REVIEW_SORTS:
         sort = 'newest'
 
-    pagination = db.paginate(reviews_query(course.id, sort))
+    pagination = db.paginate(reviews_query(course.id, sort), per_page=5)
     user_review = current_user_review(course.id)
 
     return render_template('courses/reviews.html',
